@@ -1,0 +1,233 @@
+---
+title: '#0768993#_#Sri Sankeerth Koduru#'
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(here)
+library(gridExtra)
+```   
+
+I have set various seeds to ensure that the answers and the plots make scense when knit to HTML.
+
+```{r}
+ames <- read_csv(here('Data', 'ames.csv'))
+ames
+```
+
+
+#### 1)Create a histogram of the areas variable (set binwidth = 250).
+
+```{r}
+ggplot(ames, aes(x=area)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+```
+
+
+#### 2)Describe this population distribution based on the visualization above and these summary statistics. You don’t have to use all of the summary statistics in your description, you will need to decide which ones are relevant based on the shape of the distribution.
+```{r}
+ames %>%
+  summarize(mu = mean(area), pop_med = median(area), 
+            sigma = sd(area), pop_iqr = IQR(area),
+            pop_min = min(area), pop_max = max(area),
+            pop_q1 = quantile(area, 0.25),  # first quartile, 25th percentile
+            pop_q3 = quantile(area, 0.75))
+```
+The population distribution is right skewed with a mean of 1499.69 and a median of 1442. Here we can see that the mean is greater than the median thus proving that the distribution is right skewed. Furthermore the standard deviation for this distribution is 505.5089.
+
+
+#### 3)Use sample_n to select a random sample of 50 houses from our data frame. Store the results in a new variable called samp1.
+```{r}
+set.seed(2411)
+samp1 = sample_n(ames,50)
+samp1
+```
+
+
+#### 4)Describe the distribution of area in this sample. How does it compare to the distribution of the population? Hint: the sample_n function takes a random sample of observations (i.e. rows) from the dataset, you can still refer to the variables in the dataset with the same names. Code you used in the previous exercise will also be helpful for visualizing and summarizing the sample, however be careful to not label values mu and sigma anymore since these are sample statistics, NOT population parameters. You can change the labels of any of the statistics to indicate that these come from the sample.
+```{r}
+ggplot(samp1, aes(x=area)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+```
+
+```{r}
+samp1 %>%
+  summarize(sm = mean(area), samp_med = median(area), 
+            se = sd(area), samp_iqr = IQR(area),
+            samp_min = min(area), samp_max = max(area),
+            samp_q1 = quantile(area, 0.25),  # first quartile, 25th percentile
+            samp_q3 = quantile(area, 0.75))
+```
+The population distribution is right skewed with a mean of 1535.82 and a median of 1455.5 Here we can see that the sample mean is greater than the sample median thus proving that the distribution is right skewed. Furthermore the standard deviation for this distribution is 452.2247.
+
+
+#### 5)Calculate the mean area of the homes in this sample of 50.
+```{r}
+sample_mean1 = mean(samp1$area)
+sample_mean1
+```
+
+
+#### 6)Calculate the mean area of all the homes in our population.
+```{r}
+population_mean = mean(ames$area)
+population_mean
+```
+
+
+#### 7)Would you expect the mean of your sample to match the mean of another classmate’s sample? Why, or why not? If the answer is no, would you expect the means to just be somewhat different or very different? Confirm your answer by comparing with a classmate.
+
+I would not expect the mean to be the same as each of my classmates have taken a random sample without setting a seed or choosing a different seed so the rows which were taken by each classmate will most likely be different. Thus though there is a small chance that 2 or more classmates may get the same mean without setting a seed but it is a rare occurrence. This is because each person in the class will be taking different rows to make up their sample. It could be somewhat different or very different depending on the sample chosen by another student as the population area ranges from 334 to 5642.1499.88 is the mean that Keshav has gotten and the mean that I have gotten is 1535.82.
+
+
+#### 8) Take a second sample, also of size 50, and call it samp2. How does the mean of samp2 compare with the mean of samp1?
+```{r}
+set.seed(2000)
+samp2 = sample_n(ames,50)
+samp2
+sample_mean2 = mean(samp2$area)
+sample_mean2
+diff_sample_mean = sample_mean1 - sample_mean2
+diff_sample_mean
+```
+sample 2 has a higher mean than sample 1 by 100.56 units.
+
+
+#### 9)Suppose we took two more samples, one of size 100 and one of size 1000. Which would you think would provide a more accurate estimate of the population mean? Check your answer by taking the two samples and calculating the mean of each.
+```{r}
+set.seed(2411)
+samp3 = sample_n(ames,100)
+samp3
+samp4 = sample_n(ames,1000)
+samp4
+sample_mean3 = mean(samp3$area)
+sample_mean3
+sample_mean4 = mean(samp4$area)
+sample_mean4
+diff_pop_sample100 = population_mean - sample_mean3
+diff_pop_sample100
+diff_pop_sample1000 = population_mean - sample_mean4
+diff_pop_sample1000
+```
+By keeping the in mind the central limit theorem which states that As the sample size increases we would expect samples to yield more consistent sample means, hence the variability among the sample means would be lower. By using this theorem we can say that the the sample size with 1000 rows in its sample will give a closer estimate of the population mean. This can be seen as the difference for sample with 100 rows is 15.09044 units less than the population mean and on the other hand for the sample with a 1000 rows its only 5.031444 units lower.
+
+
+#### 10)Create a histogram of the results stored in sample_means50.
+```{r}
+set.seed(2411)
+sample_means50 <- tibble(sample_means = 
+                           replicate(15000, 
+                                     mean(sample(ames$area, 50,replace =TRUE))))
+ggplot(sample_means50, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+
+```
+
+#### 11)How many elements are there in sample_means50? Describe the sampling distribution, and be sure to specifically note its center.
+```{r}
+mean(sample_means50$sample_means)
+median(sample_means50$sample_means)
+```
+
+There are 1500 means/elements in sample_means50 and each mean is derived from 50 randomly selected areas from the population set. The center of the distribution is 1499.979 and the median of the distribution is 1497.63 thus this is a nearly normal distribution as the mean and median are similar.
+
+
+#### 12)To make sure you understand how sampling distributions are built, try modifying the code to create a sampling distribution of 25 sample means from samples of size 10, and put them in a data frame named sample_means_small. Plot the results. How many observations are there in this object called sample_means_small? What does each observation represent?
+```{r}
+set.seed(2411)
+sample_means_small <- tibble(sample_means = 
+                           replicate(25, 
+                                     mean(sample(ames$area, 10,replace =TRUE))))
+ggplot(sample_means_small, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+```
+
+There are 25 observation in sample_means_small and each observation represent the mean of the 10 randomly selected areas from the population set.
+
+
+#### 13)Use the code below to create sampling distributions of means of areas from samples of size 10, 50, and 100. Use 5,000 simulations. What does each observation in the sampling distribution represent? How does the mean, standard error (i.e. the standard deviation of the sampling distribution), and shape of the sampling distribution change as the sample size increases? For a sample size of 30, does the shape of the distribution change if you increase the number of simulations from 50 to 1050 in steps of 250?
+```{r}
+set.seed(2411)
+sample_means10 <- tibble(sample_means = 
+                           replicate(5000, 
+                                     mean(sample(ames$area, 10,replace =TRUE))))
+p1 = ggplot(sample_means10, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+
+sample_means50_2 <- tibble(sample_means = 
+                           replicate(5000, 
+                                     mean(sample(ames$area, 50,replace =TRUE))))
+p2 = ggplot(sample_means50_2, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+
+sample_means100 <- tibble(sample_means = 
+                           replicate(5000, 
+                                     mean(sample(ames$area, 100,replace =TRUE))))
+p3 = ggplot(sample_means100, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+
+grid.arrange(p1,p2,p3)
+
+```
+
+As there is an increase in the sample size there will be a smaller spread for the data meaning that there will be a smaller standard error. Furthermore with a larger sample size the mean of the sample will begin to get closer to the population mean. The shape also changes as the grater the sample size the lower the spread meaning that though all of the above graphs will be nearly normally distributed the graphs will start to get narrower with the increase in the sample size. On the other hand when we keep the sample size constant at 30 and increase the reps from 50 to 1050 by 250. The for every additional 250 reps we can see the plots becoming more normally distributed.
+
+
+#### 14)Take a sample of size 15 from the population and calculate the mean price of the homes in this sample. Using this sample, what is your best point estimate of the population mean of prices of homes?
+```{r}
+set.seed(2411)
+samp_price1 = sample_n(ames,15)
+samp_price1
+sample_price_mean1 = mean(samp_price1$price)
+sample_price_mean1
+sample_price_se = sd(samp_price1$price)
+sample_price_se
+```
+The mean is 171744.2 and the standard error is 59289.58. My guess for the average price will be 172500 but this is just a blind guess as there is not enough information to go on to make a better estimate.
+
+
+#### 15)Since you have access to the population, simulate the sampling distribution of price¯¯¯¯¯¯¯¯¯¯¯ for samples of size 15 by taking 2000 samples from the population of size 15 and computing 2000 sample means. Store these means in a vector called sample_means15. Plot the data, then describe the shape of this sampling distribution. Based on this sampling distribution, what would you guess the mean home price of the population to be? Finally, calculate and report the population mean.
+```{r}
+set.seed(2411)
+sample_means15 <- tibble(sample_means = 
+                           replicate(2000, 
+                                     mean(sample(ames$price, 15,replace =TRUE))))
+ggplot(sample_means15, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+sample_means15_mean = mean(sample_means15$sample_means)
+sample_means15_mean
+sample_median15 = median(sample_means15$sample_means)
+sample_median15
+population_price_mean = mean(ames$price)
+population_price_mean
+```
+As the mean of the distribution is 181099.3 and the median of the distribution is 179932.8 we can say that the distribution of sample_means15 is slightly right skewed (as mean is slightly greater than median). As there is a huge number of samples taken and according to CLT when there is a large sample size the sample mean will equal the population mean. Taking this into consideration i would guess the mean of the population to be 181099.3. In reality the mean if the population is 180796.1 which is very similar to the mean of sample_means15.
+
+
+#### 16)Change your sample size from 15 to 150, then compute the sampling distribution using the same method as above, and store these means in a new vector called sample_means150. Describe the shape of this sampling distribution, and compare it to the sampling distribution for a sample size of 15. Based on this sampling distribution, what would you guess to be the mean sale price of homes in Ames?
+```{r}
+set.seed(2411)
+sample_means150 <- tibble(sample_means = 
+                           replicate(2000, 
+                                     mean(sample(ames$price, 150,replace =TRUE))))
+ggplot(sample_means150, aes(x=sample_means)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+sample_means150_mean = mean(sample_means150$sample_means)
+sample_means150_mean
+sample_median150 = median(sample_means150$sample_means)
+sample_median150
+population_price_mean = mean(ames$price)
+population_price_mean
+```
+As the mean of the distribution is 180844.2 and the median of the distribution is 180594.8 we can say that the distribution of sample_means150 is nearly normal(as mean and median are nearly equal to each other). As there is a huge number of samples taken and according to CLT when there is a large sample size the sample mean will equal the population mean.Furthermore as there is an increase in the number of values in each sample the sample_means150 will have a lower standard error than the sample_means15 plot. Taking this into consideration I would guess the mean of the population to be 180844.2. In reality the mean if the population is 180796.1 which is very similar to the mean of sample_means150.
+
+
+#### 17)Of the two sampling distributions calculated for price, which has a smaller spread? If we’re concerned with making estimates that are more often close to the true value, would we prefer a sampling distribution with a large or small spread?
+The distribution with a sample size of 150 has a smaller spread. The smaller spread is better as it will help it helps increasing the accuracy of the mean estimate and reduce the variability within the data.

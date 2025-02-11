@@ -1,0 +1,159 @@
+---
+title: '#0768993#_#Sri Sankeerth Koduru#'
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(here)
+library(gridExtra)
+```   
+
+I have set various seeds to ensure that the answers and the plots make scense when knit to HTML.
+
+```{r}
+ames <- read_csv(here('Data', 'ames.csv'))
+ames
+set.seed(2411)
+n <- 60
+samp <- sample_n(ames, n)
+samp
+```
+
+#### 1)Describe the distribution of house area in your sample. What would you say is the “typical” size within your sample? Also state precisely what you interpreted “typical” to mean.
+```{r}
+samp %>%
+  summarize(sample_mu = mean(area), sample_med = median(area), 
+            sigma = sd(area), sample_iqr = IQR(area),
+            sample_min = min(area), pop_max = max(area),
+            sample_q1 = quantile(area, 0.25),  # first quartile, 25th percentile
+            sample_q3 = quantile(area, 0.75))
+
+ggplot(ames, aes(x=area)) + 
+  geom_histogram(color="black", fill="white",binwidth=250)
+```
+
+The distribution of the sample is right skewed as the mean(1534.683) is greater than the median(1473.5). I do believe that this sample represents the typical size of the homes in the ames dataset. In this case my definition of typical is that it represents the how the house sizes are usually/generally distributed and can be generalized to the population dataset.
+
+
+#### 2)Would you expect another student’s distribution to be identical to yours? Would you expect it to be similar? Why or why not?
+
+It will be highly unlikely that another person will get the exact same distribution but it is possible to get a similar distribution. As the sample is derived from the same population set there is a possibility of getting similar distribution.
+
+#### 3)For the confidence interval to be valid, the sample mean must be normally distributed and have standard error s/n−−√. What conditions must be met for this to be true?
+```{r}
+z_star_95 <- qnorm(0.975)
+z_star_95
+samp %>%
+  summarise(x_bar = mean(area), 
+            se = sd(area) / sqrt(n),
+            me = z_star_95 * se,
+            lower = x_bar - me,
+            upper = x_bar + me)
+```
+
+The 2 condition are that the sampling must be independent which means that the we must take a random sample and if it is sampling with replacement then the sample size(n) must be less than 10% of the population. The other condition is that the sample size should not be extremely skewed and the n ≥ 30.
+
+
+#### 4)What does “95% confidence” mean?
+
+95 percent confidence means that about 95% of the time the population mean will fall between the lowe and upper limit of the samples confidence interval.
+
+#### 5) Does your confidence interval capture the true average size of houses in Ames? Does your neighbor’s interval capture this value?
+```{r}
+params <- ames %>%
+  summarise(mu = mean(area))
+params
+```
+
+The confidence interval which I have gotten is 1420.887,1648.48 and as the population mean is 1499.69 my confidence interval does capture the true average size of houses in Ames. My neighbors interval is 1322.83,1572.103 which does capture the true average size of houses in Ames as it is 1499.69.
+
+
+#### 6) Each student should have gotten a slightly different confidence interval. What proportion of those intervals would you expect to capture the true population mean? Why?
+
+It is hard to say exactly how many of the students will have a confidence interval which captures the population mean but as all the students are using the confidence interval of 95% it is my assumption that if we look at all the confidence intervals we should det about 95% of the capturing the population mean.
+
+#### 7)What proportion of your confidence intervals include the true population mean? Is this proportion exactly equal to the confidence level? If not, explain why. Make sure to include your plot in your answer.
+```{r}
+set.seed(2411)
+rep_sample_n <- function(tbl, size, replace = FALSE, reps = 1)
+{
+  # get the number of rows
+    n <- nrow(tbl)  
+  # get random row indices for samples of size = 'size' and do this 'reps' number of times
+    i <- unlist(replicate(reps, sample.int(n, size, replace = replace), simplify = FALSE))  
+  # create a new variable called 'replicate' to number our samples
+  # then attach this as a column to our data
+    rep_tbl <- cbind(replicate = rep(1:reps,rep(size,reps)), tbl[i,])
+  # group the data by the sample number
+    dplyr::group_by(rep_tbl, replicate)
+}
+
+ci <- ames %>%
+        rep_sample_n(size = n, reps = 50, replace = TRUE) %>%
+        summarise(x_bar = mean(area), 
+                  se = sd(area) / sqrt(n),
+                  me = z_star_95 * se,
+                  lower = x_bar - me,
+                  upper = x_bar + me)
+ci %>%
+  slice(1:5)
+
+ci <- ci %>%
+  mutate(capture_mu = ifelse(lower < params$mu & upper > params$mu, "yes", "no"))
+
+ggplot(ci, aes(x = replicate, y = x_bar, colour = capture_mu)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper)) + 
+  geom_hline(data = params, aes(yintercept = mu), color = "darkgray") + 
+  coord_flip()
+
+```
+
+46 out of the 50 include the true mean so the percentage is 92% which is close to but exactly 95%(which is the set confidence level). This is because the confidence level is an approximate not a guaranteed level there will also be cases were the percentage level may be greater then 95% as well. Thus it is not necessary for the percent to always be 95% if the confidence level is 95% but be a value close to the confidence level.
+
+
+#### 8)Pick a confidence level of your choosing, provided it is not 95%. What is the appropriate critical value?
+```{r}
+z_star_90 <- qnorm(0.950)
+z_star_90
+```
+
+The confidence level that i have chosen is 90% (0.90) so the significance level is 10% (0.10) and the appropriate critical value is 1.644854.
+
+#### 9)Calculate 50 confidence intervals at the confidence level you chose in the previous question, and plot all intervals on one plot, and calculate the proportion of intervals that include the true population mean. How does this percentage compare to the confidence level selected for the intervals? Make sure to include your plot in your answer.
+```{r}
+set.seed(2411)
+
+ci1 <- ames %>%
+        rep_sample_n(size = n, reps = 50, replace = TRUE) %>%
+        summarise(x_bar = mean(area), 
+                  se = sd(area) / sqrt(n),
+                  me = z_star_90 * se,
+                  lower = x_bar - me,
+                  upper = x_bar + me)
+ci1 %>%
+  slice(1:5)
+
+ci1 <- ci1 %>%
+  mutate(capture_mu = ifelse(lower < params$mu & upper > params$mu, "yes", "no"))
+
+ggplot(ci1, aes(x = replicate, y = x_bar, colour = capture_mu)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper)) + 
+  geom_hline(data = params, aes(yintercept = mu), color = "darkgray") + 
+  coord_flip()
+```
+
+43 out of the 50 include the true mean so the percentage is 86% which is close to but exactly 90%(which is the set confidence level). There is a 4% difference in the percentage and the confidence interval but i believe it is still a good indicator of the 90% significance level. The percent is lower than that of the 95% confidence level but it is to be expected as we have lowered the confidence level to 90%
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
